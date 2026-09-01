@@ -1547,6 +1547,26 @@ public partial class MainWindow : Window
         RestoreFromTray();
     }
 
+    /// <summary>
+    /// The Lutris client the launcher starts may exit immediately after handing
+    /// off or outlive the session, so the game process is watched instead.
+    /// </summary>
+    public async Task MinimizeToTrayAndWaitForLutrisExitAsync(string? gameExePath)
+    {
+        MinimizeToTray();
+
+        try
+        {
+            await LutrisService.WaitForGameSessionAsync(gameExePath, TimeSpan.FromMinutes(2));
+        }
+        catch (Exception ex)
+        {
+            LaunchDiagnostics.LogException("Lutris session watch failed", ex);
+        }
+
+        RestoreFromTray();
+    }
+
     private static Process? WaitForProcessByPath(string exePath, TimeSpan timeout)
     {
         var processName = Path.GetFileNameWithoutExtension(exePath);

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace ReimaginedLauncher.Utilities;
@@ -8,7 +9,8 @@ public enum InstallationType
 {
     BattleNet,
     Steam,
-    D2RMM
+    D2RMM,
+    Lutris
 }
 
 public enum LaunchExperience
@@ -34,6 +36,11 @@ public class InstallationProfile
     public Dictionary<string, List<Guid>> SelectedLadderExtensions { get; set; } = [];
     public string? InstallDirectory { get; set; }
     public string? SteamDirectory { get; set; }
+
+    // The id drives the launch URI; the slug locates the game's YAML config.
+    public int? LutrisGameId { get; set; }
+    public string? LutrisGameSlug { get; set; }
+    public string? LutrisGameName { get; set; }
     public bool IsInstallDirectoryValidated { get; set; }
     public string? SaveDirectory { get; set; }
 
@@ -127,18 +134,46 @@ public class AppSettings
     {
         get
         {
-            if (Profiles.Count == 0)
-            {
-                // Default profiles
-                Profiles.Add(new InstallationProfile { Type = InstallationType.BattleNet });
-                Profiles.Add(new InstallationProfile { Type = InstallationType.Steam });
-                Profiles.Add(new InstallationProfile { Type = InstallationType.D2RMM, AutomaticBackupsEnabled = false });
-            }
+            EnsureProfiles();
             if (SelectedProfileIndex < 0 || SelectedProfileIndex >= Profiles.Count)
             {
                 SelectedProfileIndex = 0;
             }
             return Profiles[SelectedProfileIndex];
         }
+    }
+
+    /// <summary>
+    /// Guarantees one profile per <see cref="InstallationType"/>. Existing
+    /// profiles keep their position so <see cref="SelectedProfileIndex"/> still
+    /// refers to the same installation.
+    /// </summary>
+    public void EnsureProfiles()
+    {
+        foreach (var type in Enum.GetValues<InstallationType>())
+        {
+            if (Profiles.Any(profile => profile.Type == type))
+            {
+                continue;
+            }
+
+            Profiles.Add(new InstallationProfile
+            {
+                Type = type,
+                AutomaticBackupsEnabled = type != InstallationType.D2RMM
+            });
+        }
+    }
+
+    public InstallationProfile GetProfile(InstallationType type)
+    {
+        EnsureProfiles();
+        return Profiles.First(profile => profile.Type == type);
+    }
+
+    public int GetProfileIndex(InstallationType type)
+    {
+        EnsureProfiles();
+        return Profiles.FindIndex(profile => profile.Type == type);
     }
 }

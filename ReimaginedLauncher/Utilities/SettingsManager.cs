@@ -68,6 +68,8 @@ public static class SettingsManager
             }
         }
 
+        settings.EnsureProfiles();
+
         return settings;
     }
 
